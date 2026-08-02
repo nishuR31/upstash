@@ -7,26 +7,33 @@ let authToken = sessionStorage.getItem('upstash_auth_token') || null;
 
 const originalFetch = window.fetch;
 window.fetch = async function (resource, config = {}) {
+  config = config || {};
   config.headers = config.headers || {};
   if (authToken) {
     if (config.headers instanceof Headers) {
       config.headers.set('Authorization', `Bearer ${authToken}`);
-    } else {
+    } else if (typeof config.headers === 'object') {
       config.headers['Authorization'] = `Bearer ${authToken}`;
     }
   }
 
-  const response = await originalFetch(resource, config);
+  try {
+    const response = await originalFetch(resource, config);
+    const urlStr = typeof resource === 'string' ? resource : (resource && resource.url) ? resource.url : '';
 
-  if (response.status === 401 && typeof resource === 'string' && resource.includes('/api/') && !resource.includes('/api/auth/unlock')) {
-    authToken = null;
-    sessionStorage.removeItem('upstash_auth_token');
-    if (window.triggerAppLock) {
-      window.triggerAppLock('Session expired or locked. Authentication required.');
+    if (response.status === 401 && urlStr.includes('/api/') && !urlStr.includes('/api/auth/unlock') && !urlStr.includes('/api/auth/check')) {
+      authToken = null;
+      sessionStorage.removeItem('upstash_auth_token');
+      if (window.triggerAppLock) {
+        window.triggerAppLock('Session expired or locked. Authentication required.');
+      }
     }
-  }
 
-  return response;
+    return response;
+  } catch (err) {
+    console.error("Fetch Exception:", err);
+    throw err;
+  }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -91,125 +98,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let isProdMode = false;
 
-  function showLockOverlay(msg = null) {
-    if (appLockOverlay) {
-      appLockOverlay.classList.remove('hidden');
-    }
-    if (msg && lockErrorAlert && lockErrorMsg) {
-      lockErrorMsg.textContent = msg;
-      lockErrorAlert.classList.remove('hidden');
-    } else if (lockErrorAlert) {
-      lockErrorAlert.classList.add('hidden');
-    }
-    if (lockPasswordInput) {
-      lockPasswordInput.value = '';
-      lockPasswordInput.focus();
-    }
-  }
-
-  function hideLockOverlay() {
-    if (appLockOverlay) {
-      appLockOverlay.classList.add('hidden');
-    }
-  }
-
-  window.triggerAppLock = (msg) => {
-    // Only lock if in production mode
-    if (isProdMode) {
-      showLockOverlay(msg);
-    }
-  };
-
   async function checkInitialSession() {
-    try {
-      const headers = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
-      const res = await originalFetch('/api/auth/check', { headers });
-      if (res.ok) {
-        const data = await res.json();
-        isProdMode = data.isProd || false;
-        if (data.authenticated) {
-          hideLockOverlay();
-          loadDatabases();
-          pollStatus();
-          if (!pollInterval) {
-            pollInterval = setInterval(pollStatus, 1500);
-          }
-          return;
-        }
-      }
-    } catch (err) {}
-
-    authToken = null;
-    sessionStorage.removeItem('upstash_auth_token');
-    if (isProdMode) {
-      showLockOverlay();
-    } else {
-      hideLockOverlay();
-      loadDatabases();
-      pollStatus();
-      if (!pollInterval) {
-        pollInterval = setInterval(pollStatus, 1500);
-      }
+    loadDatabases();
+    pollStatus();
+    if (!pollInterval) {
+      pollInterval = setInterval(pollStatus, 1500);
     }
-  }
-
-  // Password Visibility Toggle for Lock Screen
-  if (toggleLockPasswordBtn && lockPasswordInput && lockEyeIcon && lockEyeSlashIcon) {
-    toggleLockPasswordBtn.addEventListener('click', () => {
-      const isPassword = lockPasswordInput.type === 'password';
-      lockPasswordInput.type = isPassword ? 'text' : 'password';
-      lockEyeIcon.classList.toggle('hidden', isPassword);
-      lockEyeSlashIcon.classList.toggle('hidden', !isPassword);
-    });
-  }
-
-  // Submit Password to Unlock App
-  if (appUnlockForm) {
-    appUnlockForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const pass = lockPasswordInput ? lockPasswordInput.value.trim() : '';
-      if (!pass) return;
-
-      try {
-        const res = await originalFetch('/api/auth/unlock', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: pass }),
-        });
-
-        const data = await res.json();
-        if (res.ok && data.success && data.token) {
-          authToken = data.token;
-          sessionStorage.setItem('upstash_auth_token', authToken);
-          hideLockOverlay();
-          showToast('Application unlocked successfully!', 'success');
-          loadDatabases();
-        } else {
-          if (lockErrorAlert && lockErrorMsg) {
-            lockErrorMsg.textContent = data.error || 'Incorrect password. Access denied.';
-            lockErrorAlert.classList.remove('hidden');
-          }
-        }
-      } catch (err) {
-        if (lockErrorAlert && lockErrorMsg) {
-          lockErrorMsg.textContent = 'Failed to connect to server. Please try again.';
-          lockErrorAlert.classList.remove('hidden');
-        }
-      }
-    });
-  }
-
-  // Header Lock / Logout Action
-  if (headerLockBtn) {
-    headerLockBtn.addEventListener('click', async () => {
-      try {
-        await fetch('/api/auth/logout', { method: 'POST' });
-      } catch (e) {}
-      authToken = null;
-      sessionStorage.removeItem('upstash_auth_token');
-      showLockOverlay();
-      showToast('Application console locked.', 'info');
-    });
   }
 
   // ------------------------------------------------------------------
@@ -571,6 +465,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function saveToApisEnv(db) {
+    if (!db || !db.redisUrl) return;
+    if (db.redisUrl.includes("default:@") || db.redisUrl.includes("****") || !db.redisUrl.includes("rediss://")) {
+      console.warn("Invalid or masked TCP connection string. Skipping save to apis.env.");
+      return;
+    }
     if (isProdMode) {
       saveToLocalStorage(db);
       return;
@@ -588,7 +487,8 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(`Saved ${db.name} credentials to apis.env in JSON format!`, 'success');
+        showToast(`Saved ${db.name} credentials to apis.env!`, 'success');
+        loadDatabases();
       } else {
         showToast(data.error || 'Failed to save to apis.env', 'error');
       }
@@ -790,6 +690,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logs.length < lastLogLength) lastLogLength = 0;
 
     const newLogs = logs.slice(lastLogLength);
+    if (newLogs.length > 0 && lastLogLength === 0) {
+      if (terminalBody) terminalBody.innerHTML = '';
+    }
+
     newLogs.forEach(line => {
       const div = document.createElement('div');
       div.className = 'log-line';
@@ -803,7 +707,7 @@ document.addEventListener('DOMContentLoaded', () => {
         div.classList.add('log-info');
       }
       div.innerText = line;
-      terminalBody.appendChild(div);
+      if (terminalBody) terminalBody.appendChild(div);
     });
 
     lastLogLength = logs.length;

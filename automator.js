@@ -195,9 +195,51 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
     await submitBtn.click();
 
     // Step 4: OTP Verification Screen
-    log("[4/8] Waiting for OTP verification screen (#code)...");
+    log("[4/8] Waiting for OTP verification screen...");
     setStep(4);
-    await page.waitForSelector("#code", { timeout: 45000 });
+
+    async function findOtpInput() {
+      const selectors = [
+        "#code",
+        'input[name="code"]',
+        'input[name="otp"]',
+        'input[id="code"]',
+        'input[id="otp"]',
+        'input[placeholder*="code" i]',
+        'input[placeholder*="otp" i]',
+        'input[placeholder*="verification" i]',
+        'input.ant-input',
+        'input[type="text"]',
+        'input[type="number"]'
+      ];
+      for (const sel of selectors) {
+        try {
+          const el = await page.$(sel);
+          if (el) {
+            const isVisible = await page.evaluate(e => {
+              const style = window.getComputedStyle(e);
+              return style && style.display !== 'none' && style.visibility !== 'hidden' && e.offsetWidth > 0 && e.offsetHeight > 0;
+            }, el);
+            if (isVisible) return { element: el, selector: sel };
+          }
+        } catch { }
+      }
+      return null;
+    }
+
+    let otpTarget = null;
+    const startTime = Date.now();
+    while (Date.now() - startTime < 45000) {
+      otpTarget = await findOtpInput();
+      if (otpTarget) break;
+      await delay(1000);
+    }
+
+    if (!otpTarget) {
+      log("⚠️ Could not locate specific #code input selector, fallback to generic page input handler...");
+    } else {
+      log(`[4/8] OTP input field detected using selector: ${otpTarget.selector}`);
+    }
 
     let otpAttempts = 0;
     const maxOtpAttempts = 3;
@@ -218,23 +260,34 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
         error: otpErrorMessage,
       });
 
-      log(`[4/8] Injecting OTP code (${otpCode}) into #code input (Attempt ${otpAttempts}/${maxOtpAttempts})...`);
-      await page.click("#code", { clickCount: 3 });
-      await page.keyboard.press("Backspace");
-      await page.type("#code", String(otpCode).trim(), { delay: 50 });
-
-      const otpSubmitBtn = await page.$('button[type="submit"], button.ant-btn-primary');
-      if (otpSubmitBtn) {
-        await otpSubmitBtn.click();
-        log("[4/8] OTP submitted. Verifying...");
+      log(`[4/8] Injecting OTP code (${otpCode}) into verification input (Attempt ${otpAttempts}/${maxOtpAttempts})...`);
+      
+      let currentInputTarget = await findOtpInput();
+      if (currentInputTarget && currentInputTarget.element) {
+        await currentInputTarget.element.click({ clickCount: 3 }).catch(() => {});
+        await page.keyboard.press("Backspace").catch(() => {});
+        await currentInputTarget.element.type(String(otpCode).trim(), { delay: 50 });
+      } else {
+        await page.keyboard.type(String(otpCode).trim(), { delay: 50 });
       }
 
-      await delay(3500);
+      const otpSubmitBtn = await page.$('button[type="submit"], button.ant-btn-primary, button[data-cy*="submit"], button:not([disabled])');
+      if (otpSubmitBtn) {
+        await otpSubmitBtn.click().catch(() => {});
+        log("[4/8] OTP submitted. Verifying...");
+      } else {
+        await page.keyboard.press("Enter").catch(() => {});
+        log("[4/8] Sent Enter key for OTP submission. Verifying...");
+      }
 
-      const codeInput = await page.$("#code");
-      if (codeInput) {
+      await delay(4000);
+
+      const currentUrl = page.url();
+      const inputStillExists = await findOtpInput();
+
+      if (inputStillExists && !currentUrl.includes('/redis') && !currentUrl.includes('/console/redis')) {
         otpErrorMessage = await page.evaluate(() => {
-          const errEl = document.querySelector('.ant-form-item-has-error, .text-red-500, [role="alert"], .ant-form-item-explain-error');
+          const errEl = document.querySelector('.ant-form-item-has-error, .text-red-500, [role="alert"], .ant-form-item-explain-error, .error');
           return errEl ? errEl.innerText.trim() : "Invalid 6-digit verification code.";
         });
 

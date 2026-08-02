@@ -5,60 +5,11 @@ import compress from "@fastify/compress";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import Redis from "ioredis";
 import { runAutomation } from "./automator.js";
 import { testRedisConnection } from "./test_redis.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Load .env File
-const envPath = path.join(__dirname, ".env");
-if (fs.existsSync(envPath)) {
-  if (typeof process.loadEnvFile === "function") {
-    try { process.loadEnvFile(envPath); } catch { }
-  } else {
-    const lines = fs.readFileSync(envPath, "utf-8").split("\n");
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith("#") && trimmed.includes("=")) {
-        const [key, ...vals] = trimmed.split("=");
-        process.env[key.trim()] = vals.join("=").trim();
-      }
-    }
-  }
-}
-
-// Global Redis Instance & App Password Setup
-const NODE_ENV = process.env.NODE_ENV || "development";
-const IS_PROD = NODE_ENV === "production";
-const REDIS_URL = process.env.REDIS_URL;
-const APP_PASSWORD = process.env.APP_PASSWORD;
-
-console.log(`[Upstash Provisioner] Running in ${NODE_ENV.toUpperCase()} mode (IS_PROD=${IS_PROD})`);
-
-const redisClient = new Redis(REDIS_URL, {
-  maxRetriesPerRequest: 3,
-  connectTimeout: 10000,
-  tls: { rejectUnauthorized: false },
-});
-
-redisClient.on("connect", () => {
-  console.log("[IORedis] Successfully connected to Redis on app startup!");
-});
-
-redisClient.on("error", (err) => {
-  console.error("[IORedis] Connection Error:", err.message);
-});
-
-// Store password in Redis on startup
-try {
-  await redisClient.set("app:password", APP_PASSWORD);
-  console.log(`[IORedis] Stored key 'app:password' = '${APP_PASSWORD}' in Redis database.`);
-} catch (err) {
-  console.error("[IORedis] Failed to set 'app:password':", err.message);
-}
-
 
 // Initialize Production-Grade Secure Fastify Instance
 const fastify = Fastify({
@@ -108,44 +59,12 @@ await fastify.register(helmet, {
   xssFilter: true,
 });
 
-// Production Security Headers Hook
+// Security Headers Hook
 fastify.addHook("onSend", async (_req, reply) => {
   reply.header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
   reply.header("X-Permitted-Cross-Domain-Policies", "none");
   reply.header("X-XSS-Protection", "1; mode=block");
 });
-
-// Authentication Authorization Hook (Anti-Bypass API Security Enforcement)
-fastify.addHook("preHandler", async (req, reply) => {
-  if (req.url.startsWith("/api/")) {
-    // In Development Mode, bypass password requirement
-    if (!IS_PROD) {
-      return;
-    }
-    if (req.url.startsWith("/api/auth/unlock") || req.url.startsWith("/api/auth/check")) {
-      return;
-    }
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.replace(/^Bearer\s+/i, "").trim();
-
-    if (!token) {
-      return reply.status(401).send({ error: "App is locked. Authentication required." });
-    }
-
-    let isAuth = false;
-    try {
-      const val = await redisClient.get(`app:session:${token}`);
-      if (val === "authenticated") isAuth = true;
-    } catch (err) {
-      console.error("Redis session lookup error:", err.message);
-    }
-
-    if (!isAuth) {
-      return reply.status(401).send({ error: "Session invalid or expired. App is locked." });
-    }
-  }
-});
-
 
 // State for active task
 let activeTask = {
@@ -181,60 +100,9 @@ fastify.get("/", async (req, reply) => {
   return htmlContent;
 });
 
-// AUTH ENDPOINT 1: Unlock App (Validate against Redis app:password)
-fastify.post("/api/auth/unlock", async (req, reply) => {
-  const { password } = req.body || {};
-  if (!password) {
-    return reply.status(400).send({ error: "Password is required to unlock app." });
-  }
-
-  let storedPassword = APP_PASSWORD;
-  try {
-    const redisPass = await redisClient.get("app:password");
-    if (redisPass) storedPassword = redisPass;
-  } catch (err) {
-    console.error("Failed to read app:password from Redis:", err.message);
-  }
-
-  if (password.trim() !== storedPassword) {
-    return reply.status(401).send({ error: "Incorrect password. Access denied." });
-  }
-
-  // Issue session token
-  const token = `sess_${Math.random().toString(36).substring(2)}_${Date.now().toString(36)}`;
-  try {
-    await redisClient.set(`app:session:${token}`, "authenticated", "EX", 86400); // 24 Hours TTL
-  } catch (err) {
-    console.error("Failed to save session token to Redis:", err.message);
-  }
-
-  return reply.send({ success: true, token, message: "App unlocked successfully." });
-});
-
-// AUTH ENDPOINT 2: Check Session
-fastify.get("/api/auth/check", async (req, reply) => {
-  // In development mode, no password required
-  if (!IS_PROD) {
-    return reply.send({ authenticated: true, isProd: false, devMode: true });
-  }
-
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.replace(/^Bearer\s+/i, "").trim();
-
-  if (!token) {
-    return reply.status(401).send({ authenticated: false, isProd: true, error: "No token provided." });
-  }
-
-  try {
-    const val = await redisClient.get(`app:session:${token}`);
-    if (val === "authenticated") {
-      return reply.send({ authenticated: true, isProd: true });
-    }
-  } catch (err) {
-    console.error("Check session error:", err.message);
-  }
-
-  return reply.status(401).send({ authenticated: false, isProd: true, error: "Session expired or invalid." });
+// Auth Check (Unlocked)
+fastify.get("/api/auth/check", async (_req, reply) => {
+  return reply.send({ authenticated: true });
 });
 
 // AUTH ENDPOINT 3: Logout App

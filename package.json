@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "bun server.js",
-    "dev": "bunx kill-port 4000 && bun --watch server.js",
+    "dev": "bun server.js",
     "build": "bunx puppeteer browsers install chrome",
     "postinstall": "bunx puppeteer browsers install chrome",
     "test-redis": "bun test_redis.js"
