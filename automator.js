@@ -640,9 +640,9 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
     return credentialsResult;
   } catch (err) {
     if (err.message.includes('Target closed') || err.message.includes('Browser closed') || err.message.includes('stopped by user')) {
-      log(`🛑 Provisioning process stopped by user.`);
+      log(`Provisioning process stopped by user.`);
     } else {
-      log(`❌ Automation Error: ${err.message}`);
+      log(`Automation Error: ${err.message}`);
     }
     throw err;
   } finally {
