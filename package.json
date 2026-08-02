@@ -6,8 +6,8 @@
   "scripts": {
     "start": "bun server.js",
     "dev": "bunx kill-port 4000 && bun --watch server.js",
-    "build": "bunx puppeteer browsers install chrome",
-    "postinstall": "bunx puppeteer browsers install chrome",
+    "build": "npx puppeteer browsers install chrome",
+    "postinstall": "npx puppeteer browsers install chrome",
     "test-redis": "bun test_redis.js"
   },
   "dependencies": {

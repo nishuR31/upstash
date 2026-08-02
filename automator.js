@@ -1,6 +1,7 @@
 import puppeteer from "puppeteer";
 import fs from "fs";
 import os from "os";
+import path from "path";
 
 /**
  * Upstash Account Signup & Redis Creation Automator
@@ -33,20 +34,32 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
 
     if (!executablePath) {
       const homedir = process.env.HOME || os.homedir();
-      const cacheDir = `${homedir}/.cache/puppeteer/chrome`;
-      if (fs.existsSync(cacheDir)) {
-        try {
-          const subdirs = fs.readdirSync(cacheDir);
-          for (const dir of subdirs) {
-            const candidate = `${cacheDir}/${dir}/chrome-linux64/chrome`;
-            if (fs.existsSync(candidate)) {
-              executablePath = candidate;
-              break;
+      const searchDirs = [
+        `${homedir}/.cache/puppeteer/chrome`,
+        `/opt/render/.cache/puppeteer/chrome`,
+        `/root/.cache/puppeteer/chrome`,
+        path.join(process.cwd(), ".cache", "puppeteer", "chrome")
+      ];
+
+      for (const cacheDir of searchDirs) {
+        if (fs.existsSync(cacheDir)) {
+          try {
+            const subdirs = fs.readdirSync(cacheDir);
+            for (const dir of subdirs) {
+              const candidates = [
+                `${cacheDir}/${dir}/chrome-linux64/chrome`,
+                `${cacheDir}/${dir}/chrome-linux/chrome`,
+                `${cacheDir}/${dir}/chrome`
+              ];
+              const found = candidates.find(c => fs.existsSync(c));
+              if (found) {
+                executablePath = found;
+                break;
+              }
             }
-          }
-        } catch {
-          // Ignore read error
+          } catch { }
         }
+        if (executablePath) break;
       }
     }
 
@@ -58,6 +71,21 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
         "/usr/bin/chromium-browser",
       ];
       executablePath = systemPaths.find((p) => fs.existsSync(p));
+    }
+
+    if (!executablePath) {
+      log(`[1/8] Chrome binary not found in system cache. Attempting auto-installation...`);
+      try {
+        const { execSync } = await import("child_process");
+        execSync("npx puppeteer browsers install chrome", { stdio: "ignore" });
+        log(`[1/8] Chrome auto-installation process completed.`);
+        try {
+          const installedPath = puppeteer.executablePath();
+          if (fs.existsSync(installedPath)) executablePath = installedPath;
+        } catch { }
+      } catch (installErr) {
+        log(`[1/8] Auto-installation note: ${installErr.message}`);
+      }
     }
 
     const isHeadless = process.env.HEADLESS !== "false";
