@@ -517,6 +517,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function executeDeleteDatabaseLink(dbName) {
+    if (isProdMode) {
+      try {
+        const list = JSON.parse(localStorage.getItem('upstash_prod_databases') || '[]');
+        const updated = list.filter(item => item.name !== dbName && item.endpoint !== dbName);
+        localStorage.setItem('upstash_prod_databases', JSON.stringify(updated));
+        showToast(`Successfully deleted database link for "${dbName}" from local storage!`, 'success');
+        loadDatabases();
+        return;
+      } catch (e) {}
+    }
     try {
       const res = await fetch('/api/databases/delete', {
         method: 'POST',

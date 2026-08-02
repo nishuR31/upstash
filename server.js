@@ -464,50 +464,8 @@ function writeApisEnvFile(list) {
 
 // 5. List Databases Endpoint
 fastify.get("/api/databases", async (req, reply) => {
-  const envList = readApisEnvFile();
-
-  const defaultDbs = [
-    {
-      id: "db-101822",
-      name: "engaged-arachnid-101822",
-      endpoint: "engaged-arachnid-101822.upstash.io",
-      port: 6379,
-      tls: true,
-      region: "us-east-1 (N. Virginia)",
-      redisUrl: "rediss://default:gQAAAAAAAY2-AAIgcDE4NmY4YjJhM2UxODg0NTBkYjQzOTI1MjM0YTEzYmMyOA@engaged-arachnid-101822.upstash.io:6379",
-      restUrl: "https://engaged-arachnid-101822.upstash.io",
-      restToken: "gQAAAAAAAY2-AAIgcDE4NmY4YjJhM2UxODg0NTBkYjQzOTI1MjM0YTEzYmMyOA",
-      commandsUsed: 11,
-      maxCommands: 500000,
-      bandwidthUsed: "0 B",
-      maxBandwidth: "50 GB",
-      storageUsed: "0 B",
-      maxStorage: "256 MB",
-      locked: false,
-    },
-    {
-      id: "db-126451",
-      name: "profound-whale-126451",
-      endpoint: "profound-whale-126451.upstash.io",
-      port: 6379,
-      tls: true,
-      region: "us-east-1 (N. Virginia)",
-      redisUrl: "rediss://default:gQAAAAAAAe3zAAIgcDFhYzQxYjFlMDNkOWY0MmI0YjcxMjI0MjM0ZmM1YzIxNA@profound-whale-126451.upstash.io:6379",
-      restUrl: "https://profound-whale-126451.upstash.io",
-      restToken: "gQAAAAAAAe3zAAIgcDFhYzQxYjFlMDNkOWY0MmI0YjcxMjI0MjM0ZmM1YzIxNA",
-      commandsUsed: 3,
-      maxCommands: 500000,
-      bandwidthUsed: "0 B",
-      maxBandwidth: "50 GB",
-      storageUsed: "0 B",
-      maxStorage: "256 MB",
-      locked: false,
-    },
-  ];
-
-  // Merge apis.env contents into database list
+  const envList = !IS_PROD ? readApisEnvFile() : [];
   const databasesMap = new Map();
-  defaultDbs.forEach(db => databasesMap.set(db.name, db));
 
   envList.forEach((envItem, idx) => {
     const epMatch = envItem.redisUrl ? envItem.redisUrl.match(/@([^:\/]+)/) : null;
@@ -630,20 +588,9 @@ fastify.post("/api/databases/toggle-lock", async (req, reply) => {
     if (existingIndex >= 0) {
       list[existingIndex].locked = !list[existingIndex].locked;
       isLocked = list[existingIndex].locked;
-    } else {
-      // If not in env file, add default record with locked=true
-      const defaultMatch = [
-        { name: "engaged-arachnid-101822", redisUrl: "rediss://default:gQAAAAAAAY2-AAIgcDE4NmY4YjJhM2UxODg0NTBkYjQzOTI1MjM0YTEzYmMyOA@engaged-arachnid-101822.upstash.io:6379", restUrl: "https://engaged-arachnid-101822.upstash.io", restToken: "gQAAAAAAAY2-AAIgcDE4NmY4YjJhM2UxODg0NTBkYjQzOTI1MjM0YTEzYmMyOA" },
-        { name: "profound-whale-126451", redisUrl: "rediss://default:gQAAAAAAAe3zAAIgcDFhYzQxYjFlMDNkOWY0MmI0YjcxMjI0MjM0ZmM1YzIxNA@profound-whale-126451.upstash.io:6379", restUrl: "https://profound-whale-126451.upstash.io", restToken: "gQAAAAAAAe3zAAIgcDFhYzQxYjFlMDNkOWY0MmI0YjcxMjI0MjM0ZmM1YzIxNA" }
-      ].find(d => d.name === name);
-
-      if (defaultMatch) {
-        list.push({ ...defaultMatch, locked: true });
-        isLocked = true;
-      }
+      writeApisEnvFile(list);
     }
 
-    writeApisEnvFile(list);
     return reply.send({ success: true, locked: isLocked, message: `Database ${name} is now ${isLocked ? 'LOCKED' : 'UNLOCKED'}` });
   } catch (err) {
     return reply.status(500).send({ error: `Failed to toggle lock: ${err.message}` });
