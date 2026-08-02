@@ -429,8 +429,20 @@ fastify.post("/api/redis/test", async (req, reply) => {
   }
 });
 
-// Helper to read apis.env JSON array
+// Helper to read apis.env JSON array or process.env.APIS_JSON
 function readApisEnvFile() {
+  // 1. Check environment variable APIS_JSON or APIS_ENV (for production hosts like Render/Vercel/Railway)
+  const envJsonStr = process.env.APIS_JSON || process.env.APIS_ENV;
+  if (envJsonStr) {
+    try {
+      const parsed = JSON.parse(envJsonStr);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (err) {
+      console.error("Failed to parse APIS_JSON from process.env:", err.message);
+    }
+  }
+
+  // 2. Fall back to reading apis.env file on disk if present
   const envFilePath = path.join(__dirname, "apis.env");
   if (fs.existsSync(envFilePath)) {
     const content = fs.readFileSync(envFilePath, "utf-8").trim();
@@ -452,7 +464,7 @@ function writeApisEnvFile(list) {
 
 // 5. List Databases Endpoint
 fastify.get("/api/databases", async (req, reply) => {
-  const envList = !IS_PROD ? readApisEnvFile() : [];
+  const envList = readApisEnvFile();
 
   const defaultDbs = [
     {
