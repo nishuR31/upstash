@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upstash Redis Enterprise Dashboard</title>
+  <meta name="description" content="Production-grade Upstash Redis Management Dashboard and Provisioning Engine.">
+  <link rel="stylesheet" href="/public/style.css">
+  <script defer src="/public/app.js"></script>
+</head>
+<body>
+
+  <div class="app-shell">
+    
+    <!-- Top Navigation Header Bar -->
+    <header class="navbar">
+      <div class="navbar-container">
+        <!-- Brand & Logo -->
+        <div class="brand">
+          <div class="brand-badge">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          </div>
+          <div class="brand-info">
+            <span class="brand-title">UPSTASH REDIS</span>
+            <span class="brand-subtitle">Console & Cloud Engine</span>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+          <button class="nav-tab active" data-tab="overview">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13.2l9-9 9 9M5 11.5v8.5a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-8.5"/></svg>
+            <span>Overview</span>
+          </button>
+          <button class="nav-tab" data-tab="clusters">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            <span>Clusters & DBs</span>
+            <span id="clustersCountBadge" class="nav-pill">2</span>
+          </button>
+          <button class="nav-tab" data-tab="provisioner">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            <span>Provisioner</span>
+          </button>
+          <button class="nav-tab" data-tab="diagnostics">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            <span>Diagnostics</span>
+          </button>
+        </nav>
+
+        <!-- Right Header Controls -->
+        <div class="navbar-actions">
+          <div id="globalStatusBadge" class="status-badge status-online">
+            <span class="status-dot"></span>
+            <span id="globalStatusText">ALL SYSTEMS ONLINE</span>
+          </div>
+          <button type="button" id="headerProvisionBtn" class="btn-primary-sm">
+            <span>+ Provision Database</span>
+          </button>
+          <button type="button" id="headerLockBtn" class="btn-secondary-sm" title="Lock App Console">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span>Lock</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Views Container -->
+    <main class="main-body">
+
+      <!-- VIEW 1: OVERVIEW DASHBOARD -->
+      <section id="view-overview" class="view-panel active">
+        <!-- Top Metrics Cards Grid -->
+        <div class="metrics-grid">
+          
+          <!-- Metric 1: Commands -->
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">MONTHLY COMMANDS</span>
+              <span class="metric-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+              </span>
+            </div>
+            <div class="metric-value-row">
+              <span class="metric-number">14</span>
+              <span class="metric-unit">/ 500k free quota</span>
+            </div>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill fill-emerald" style="width: 1%;"></div>
+            </div>
+            <div class="metric-footer-detail">
+              <span class="dot-green">●</span> 7 Writes &nbsp;
+              <span class="dot-blue">●</span> 7 Reads
+            </div>
+          </div>
+
+          <!-- Metric 2: Bandwidth -->
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">BANDWIDTH USAGE</span>
+              <span class="metric-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+              </span>
+            </div>
+            <div class="metric-value-row">
+              <span class="metric-number">0 B</span>
+              <span class="metric-unit">/ 50 GB free quota</span>
+            </div>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill fill-cyan" style="width: 0.5%;"></div>
+            </div>
+            <div class="metric-footer-detail">
+              <span class="text-emerald">Optimal network bandwidth</span>
+            </div>
+          </div>
+
+          <!-- Metric 3: Storage -->
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">MEMORY STORAGE</span>
+              <span class="metric-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="12" x2="2" y2="12"></line><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path><line x1="6" y1="16" x2="6.01" y2="16"></line><line x1="10" y1="16" x2="10.01" y2="16"></line></svg>
+              </span>
+            </div>
+            <div class="metric-value-row">
+              <span class="metric-number">0 B</span>
+              <span class="metric-unit">/ 256 MB RAM</span>
+            </div>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill fill-purple" style="width: 0.5%;"></div>
+            </div>
+            <div class="metric-footer-detail">
+              <span class="text-emerald">Memory engine healthy</span>
+            </div>
+          </div>
+
+          <!-- Metric 4: Cost -->
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">ESTIMATED COST</span>
+              <span class="metric-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+              </span>
+            </div>
+            <div class="metric-value-row">
+              <span class="metric-number">$0.00</span>
+              <span class="metric-unit">Free Tier Active</span>
+            </div>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill fill-amber" style="width: 0%;"></div>
+            </div>
+            <div class="metric-footer-detail">
+              <span>Per-request pay-as-you-go</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Dashboard Section: Cluster Status Overview -->
+        <div class="dashboard-section">
+          <div class="section-title-bar">
+            <div>
+              <h2 class="section-title">Active Redis Database Clusters</h2>
+              <p class="section-subtitle">Real-time status, endpoints, and health ping diagnostics across all provisioned clusters.</p>
+            </div>
+            <button type="button" id="refreshClusterStatsBtn" class="btn-secondary">
+              Refresh Health
+            </button>
+          </div>
+
+          <div id="overviewClusterGrid" class="clusters-grid">
+            <!-- Dynamically populated via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: CLUSTERS & DATABASES MANAGEMENT -->
+      <section id="view-clusters" class="view-panel">
+        <div class="dashboard-section">
+          <div class="section-title-bar">
+            <div>
+              <h2 class="section-title">Database Credentials & Connection Hub</h2>
+              <p class="section-subtitle">Access connection strings, REST keys, SDK configuration, and CLI snippets for your Upstash databases.</p>
+            </div>
+            <div class="search-box-wrapper">
+              <input type="text" id="clusterSearchInput" placeholder="Search clusters by name or endpoint..." class="input-control font-mono" />
+            </div>
+          </div>
+
+          <div id="fullClustersList" class="clusters-detail-list">
+            <!-- Dynamically populated via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: AUTOMATION PROVISIONER ENGINE -->
+      <section id="view-provisioner" class="view-panel">
+        <div class="provisioner-grid">
+          
+          <!-- Left Column: Form Input -->
+          <div class="card shadow-lg">
+            <div class="card-header">
+              <h2 class="card-title">
+                <span>Provision New Upstash Redis Cluster</span>
+              </h2>
+              <span class="badge-tag">Automated Headless Engine</span>
+            </div>
+
+            <form id="provisionForm">
+              <!-- Account Tag -->
+              <div class="form-group">
+                <label for="keyTag" class="form-label">Account Tag / Number</label>
+                <input type="text" id="keyTag" value="7" placeholder="e.g. 7, 8, dev1" class="input-control key-input font-mono" />
+                <span class="field-hint">Auto-updates email (+7) and database name (redis-db7)</span>
+              </div>
+
+              <!-- Email -->
+              <div class="form-group">
+                <label for="email" class="form-label">Upstash Account Email *</label>
+                <input type="email" id="email" value="dreamgf691+7@gmail.com" required class="input-control" />
+              </div>
+
+              <!-- Password -->
+              <div class="form-group">
+                <label for="password" class="form-label">Account Password *</label>
+                <div class="input-wrapper">
+                  <input type="password" id="password" value="Qwertyui12345678@dreamupstash" required class="input-control" />
+                  <button type="button" id="togglePasswordBtn" class="toggle-eye-btn" aria-label="Toggle password visibility">
+                    <svg id="eyeIcon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    <svg id="eyeSlashIcon" class="hidden" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.04 10.04 0 014.122-.963c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21M3 3l18 18"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Database Name -->
+              <div class="form-group">
+                <label for="dbName" class="form-label">Database Name *</label>
+                <input type="text" id="dbName" value="redis-db7" required class="input-control font-mono" />
+              </div>
+
+              <!-- Action Buttons -->
+              <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+                <button type="submit" id="startBtn" class="btn-primary" style="flex: 1;">
+                  <span>Execute Provisioning Process</span>
+                </button>
+                <button type="button" id="stopBtn" class="btn-danger hidden" style="flex: 0 0 160px;">
+                  <span>Stop Execution</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Right Column: Terminal Console & Stepper -->
+          <div class="card shadow-lg flex-col">
+            <div class="card-header">
+              <h2 class="card-title">
+                <span>Provisioning Engine Output</span>
+              </h2>
+              <button type="button" id="clearTerminalBtn" class="btn-secondary">Clear Terminal</button>
+            </div>
+
+            <!-- Terminal Window -->
+            <div class="terminal-window flex-1">
+              <div class="terminal-header">
+                <span class="terminal-title">puppeteer@upstash-automator ~ bash</span>
+                <div class="terminal-controls">
+                  <span style="color:#ef4444;">●</span>
+                  <span style="color:#f59e0b;">●</span>
+                  <span style="color:#10b981;">●</span>
+                </div>
+              </div>
+              <div id="terminalBody" class="terminal-body">
+                <div class="log-line log-info">[System Idle] Press "Execute Provisioning Process" to start account signup and cluster creation...</div>
+              </div>
+            </div>
+
+            <!-- OTP Verification Banner (Appears when WAITING_FOR_OTP) -->
+            <div id="otpBanner" class="otp-banner hidden">
+              <div class="otp-title">
+                <span>Email Verification Code Required</span>
+                <span id="otpBadge" class="otp-badge">Attempt 1 of 3</span>
+              </div>
+              <div id="otpErrorAlert" class="otp-error-alert hidden">
+                <span id="otpErrorMsg">Incorrect code. Please try again.</span>
+              </div>
+              <form id="otpForm" class="otp-form-inline">
+                <input type="text" id="otpInput" placeholder="Enter 6-digit verification OTP" maxlength="6" class="input-control font-mono" required />
+                <button type="submit" id="otpSubmitBtn" class="btn-primary">Submit Code</button>
+              </form>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- VIEW 4: DIAGNOSTICS & PLAYGROUND -->
+      <section id="view-diagnostics" class="view-panel">
+        <div class="card shadow-lg">
+          <div class="card-header">
+            <h2 class="card-title">
+              <span>Cluster Health & Command Execution Console</span>
+            </h2>
+            <span class="badge-tag">Live IORedis Driver</span>
+          </div>
+
+          <div class="diagnostics-layout">
+            
+            <!-- Left Side Controls -->
+            <div class="diag-controls">
+              <div class="form-group">
+                <label for="diagTargetSelect" class="form-label">Select Target Cluster</label>
+                <select id="diagTargetSelect" class="input-control font-mono">
+                  <option value="rediss://default:gQAAAAAAAY2-AAIgcDE4NmY4YjJhM2UxODg0NTBkYjQzOTI1MjM0YTEzYmMyOA@engaged-arachnid-101822.upstash.io:6379">engaged-arachnid-101822.upstash.io</option>
+                  <option value="rediss://default:gQAAAAAAAe3zAAIgcDFhYzQxYjFlMDNkOWY0MmI0YjcxMjI0MjM0ZmM1YzIxNA@profound-whale-126451.upstash.io:6379">profound-whale-126451.upstash.io</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="customUrlInput" class="form-label">Or Custom Connection String (rediss://...)</label>
+                <input type="text" id="customUrlInput" placeholder="rediss://default:token@cluster.upstash.io:6379" class="input-control font-mono" />
+              </div>
+
+              <button type="button" id="runDiagBtn" class="btn-primary full-width">
+                <span>Run Health Check (PING / SET / GET)</span>
+              </button>
+            </div>
+
+            <!-- Right Side Console Output -->
+            <div class="diag-results flex-1">
+              <div class="diag-results-header">
+                <span>Diagnostic Execution Report</span>
+                <span id="diagLatencyBadge" class="diag-badge hidden">0 ms</span>
+              </div>
+              <pre id="diagOutputConsole" class="diag-console font-mono">Select a target database cluster and click "Run Health Check"...</pre>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Global Toast Notification Hub -->
+    <div id="toastContainer"></div>
+
+    <!-- Custom Glassmorphic Confirm Delete Modal -->
+    <div id="customConfirmModal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">Confirm Database Link Deletion</h3>
+        </div>
+        <div class="modal-body">
+          <p id="confirmModalText">Are you sure you want to remove this database link from apis.env?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="confirmCancelBtn" class="btn-secondary">Cancel</button>
+          <button type="button" id="confirmDeleteBtn" class="btn-danger">Delete Link</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MASTER APP LOCK OVERLAY SCREEN -->
+    <div id="appLockOverlay" class="lock-overlay">
+      <div class="lock-card">
+        <div class="lock-header">
+          <div class="lock-icon-badge">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <h2 class="lock-title">Upstash Security Lock</h2>
+          <p class="lock-subtitle">Application is locked. Enter the master password to gain access to clusters and controls.</p>
+        </div>
+
+        <form id="appUnlockForm" class="lock-form">
+          <div class="form-group">
+            <label for="lockPasswordInput" class="form-label">Master Access Password</label>
+            <div class="input-wrapper">
+              <input type="password" id="lockPasswordInput" placeholder="Enter password" class="input-control font-mono" required autofocus />
+              <button type="button" id="toggleLockPasswordBtn" class="toggle-eye-btn" aria-label="Toggle password visibility">
+                <svg id="lockEyeIcon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                <svg id="lockEyeSlashIcon" class="hidden" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.04 10.04 0 014.122-.963c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21M3 3l18 18"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div id="lockErrorAlert" class="lock-error-alert hidden">
+            <span id="lockErrorMsg">Incorrect password. Access denied.</span>
+          </div>
+
+          <button type="submit" id="unlockSubmitBtn" class="btn-primary full-width">
+            <span>Unlock Application Console</span>
+          </button>
+        </form>
+        <div class="lock-footer">
+          <span>Protected by IORedis Backend Session Store</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
