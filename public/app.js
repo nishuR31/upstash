@@ -130,6 +130,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.authenticated) {
           hideLockOverlay();
           loadDatabases();
+          pollStatus();
+          if (!pollInterval) {
+            pollInterval = setInterval(pollStatus, 1500);
+          }
           return;
         }
       }
@@ -142,6 +146,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       hideLockOverlay();
       loadDatabases();
+      pollStatus();
+      if (!pollInterval) {
+        pollInterval = setInterval(pollStatus, 1500);
+      }
     }
   }
 
@@ -810,7 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       appendLogLines(data.logs);
 
-      // Handle OTP Banner
+      // Handle OTP Banner & Interactivity
       if (data.status === 'WAITING_FOR_OTP') {
         otpBanner.classList.remove('hidden');
         if (otpBadge) otpBadge.innerText = `Attempt ${data.otpAttempt || 1} of ${data.maxOtpAttempts || 3}`;
@@ -820,6 +828,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           otpErrorAlert.classList.add('hidden');
         }
+        if (startBtn) {
+          startBtn.disabled = true;
+          startBtn.innerHTML = '<span>Action Required: Enter 6-Digit OTP Code Above</span>';
+        }
+        if (otpInput && document.activeElement !== otpInput) {
+          otpInput.focus();
+        }
       } else {
         otpBanner.classList.add('hidden');
       }
@@ -827,6 +842,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // Handle Active vs Completion Statuses
       if (data.status === 'RUNNING' || data.status === 'WAITING_FOR_OTP') {
         if (stopBtn) stopBtn.classList.remove('hidden');
+        if (data.status === 'RUNNING' && startBtn) {
+          startBtn.disabled = true;
+          startBtn.innerHTML = '<span>Provisioning Engine Running...</span>';
+        }
       }
 
       if (data.status === 'SUCCESS') {

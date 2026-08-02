@@ -125,7 +125,7 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
           return true;
         };
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     // Network API Response Interceptor for JSON credential payloads
     let interceptedPassword = null;
@@ -168,7 +168,7 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
             }
           }
         }
-      } catch {}
+      } catch { }
     });
 
     // Step 2: Navigate to Signup
@@ -340,27 +340,27 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
     // If still on list page /redis, refresh page and click the dbName link
     if (!onDetailsPage) {
       log("Navigating to Redis dashboard list to locate new database...");
-      await page.goto("https://console.upstash.com/redis", { waitUntil: "networkidle2" }).catch(() => {});
+      await page.goto("https://console.upstash.com/redis", { waitUntil: "networkidle2" }).catch(() => { });
       await delay(4000);
 
       const dbClicked = await page.evaluate((targetDb) => {
         // Find text matching dbName (e.g. redis-db10)
         const allElements = Array.from(document.querySelectorAll('a, tr, div, span, td, h1, h2, h3, h4, h5'));
         const targetEl = allElements.find(el => (el.textContent || '').trim().toLowerCase() === targetDb.toLowerCase());
-        
+
         if (targetEl) {
           const clickable = targetEl.closest('a') || targetEl.closest('tr') || targetEl.closest('div') || targetEl;
           clickable.click();
           return true;
         }
-        
+
         // Fallback to any link containing /details or /redis/<uuid>
         const detailLinks = Array.from(document.querySelectorAll('a[href*="/redis/"]')).filter(a => a.href.includes('/details') || a.href.match(/\/redis\/[a-f0-9-]{10,}/i));
         if (detailLinks.length > 0) {
           detailLinks[0].click();
           return true;
         }
-        
+
         return false;
       }, dbName);
 
@@ -389,7 +389,7 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
 
           // Convert all password inputs to text inputs so values are exposed in JS DOM
           document.querySelectorAll('input[type="password"]').forEach(input => {
-            try { input.type = 'text'; } catch {}
+            try { input.type = 'text'; } catch { }
           });
 
           // Target elements with aria-describedby, tooltips, or reveal icons
@@ -400,7 +400,7 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
               el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
               el.dispatchEvent(new MouseEvent('focus', { bubbles: true }));
               if (typeof el.click === 'function') el.click();
-            } catch {}
+            } catch { }
 
             // Check tooltip target element referenced by aria-describedby
             const targetId = el.getAttribute('aria-describedby');
@@ -423,17 +423,17 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
             const parentText = el.parentElement ? (el.parentElement.textContent || '').toLowerCase() : '';
 
             const isEyeOrReveal = aria.includes('eye') || aria.includes('show') || aria.includes('reveal') || aria.includes('password') || aria.includes('copy') ||
-                                  title.includes('eye') || title.includes('show') || title.includes('reveal') || title.includes('password') || title.includes('copy') ||
-                                  cls.includes('eye') || cls.includes('show') || cls.includes('password') || cls.includes('copy') ||
-                                  html.includes('tabler-icon-eye') || html.includes('lucide-eye') || html.includes('copy') || text === 'show' ||
-                                  parentText.includes('token') || parentText.includes('****');
+              title.includes('eye') || title.includes('show') || title.includes('reveal') || title.includes('password') || title.includes('copy') ||
+              cls.includes('eye') || cls.includes('show') || cls.includes('password') || cls.includes('copy') ||
+              html.includes('tabler-icon-eye') || html.includes('lucide-eye') || html.includes('copy') || text === 'show' ||
+              parentText.includes('token') || parentText.includes('****');
 
             if (isEyeOrReveal) {
               try {
                 el.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
                 el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
                 if (typeof el.click === 'function') el.click();
-              } catch {}
+              } catch { }
             }
           });
 
@@ -447,14 +447,14 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
           allClickables.forEach(btn => {
             const text = (btn.textContent || '').trim().toUpperCase();
             const isCopy = text === 'TCP' || text === 'TOKEN' || text === 'HTTPS' || text === 'READONLY TOKEN' || text.includes('COPY') ||
-                           btn.getAttribute('data-testid') === 'copy-info-button' || btn.classList.contains('ant-typography-copy');
+              btn.getAttribute('data-testid') === 'copy-info-button' || btn.classList.contains('ant-typography-copy');
             if (isCopy) {
               try {
                 if (typeof btn.click === 'function') btn.click();
-              } catch {}
+              } catch { }
             }
           });
-        }).catch(() => {});
+        }).catch(() => { });
 
         await delay(600);
 
@@ -478,7 +478,7 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
           const tabs = Array.from(container.querySelectorAll('button, div, span, a, tab, [data-node-key]'));
           const tcpTab = tabs.find(el => (el.textContent && el.textContent.trim() === 'TCP') || el.getAttribute('data-node-key') === 'TCP');
           if (tcpTab) tcpTab.click();
-        }).catch(() => {});
+        }).catch(() => { });
 
         await delay(600);
 
@@ -528,7 +528,7 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
             // Pattern 3: REST token variable or JSON key
             if (!rToken) {
               const tokenMatch = s.match(/UPSTASH_REDIS_REST_TOKEN=["']?([^"'\s*]+)["']?/i) ||
-                                 s.match(/["']?(?:rest_token|restToken|token|password)["']?\s*[:=]\s*["']([^"'\s]+)["']/i);
+                s.match(/["']?(?:rest_token|restToken|token|password)["']?\s*[:=]\s*["']([^"'\s]+)["']/i);
               if (tokenMatch && tokenMatch[1] && !tokenMatch[1].includes('*') && tokenMatch[1].length > 10) {
                 rToken = tokenMatch[1];
               }
@@ -537,7 +537,7 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
             // Pattern 4: REST URL
             if (!rUrl) {
               const urlMatch = s.match(/UPSTASH_REDIS_REST_URL=["']?(https:\/\/[^"'\s]+)["']?/i) ||
-                               s.match(/(https:\/\/[a-zA-Z0-9-]+\.upstash\.io(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*))/i);
+                s.match(/(https:\/\/[a-zA-Z0-9-]+\.upstash\.io(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*))/i);
               if (urlMatch) {
                 rUrl = urlMatch[1] || urlMatch[0];
               }
@@ -556,7 +556,7 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
               }
             }
           }
-          
+
           if (!rToken) {
             for (const s of sources) {
               const base64Match = s.match(/\b([A-Za-z0-9_-]{35,120})\b/);
@@ -569,7 +569,7 @@ export async function runAutomation({ email, password, dbName, onLog, onOtpRequi
 
           return { tcpUrl, pass, rUrl, rToken, copiedStrings: window.__copiedStrings };
         });
-        
+
         log(`Extracted copied strings in browser: ${JSON.stringify(scraped.copiedStrings || [])}`);
 
         // Combine DOM Scraped credentials with Network Intercepted credentials
