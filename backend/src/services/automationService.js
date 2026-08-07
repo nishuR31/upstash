@@ -4,7 +4,11 @@ import { APIS_ENV_PATH } from "../config/envConfig.js";
 const activeTask = {
   status: "IDLE",
   step: 0,
+  checkpointsCompleted: [],
   logs: [],
+  copiedStrings: [],
+  interceptedUrls: [],
+  returnedData: null,
   redisUrl: null,
   credentials: null,
   otpError: null,
@@ -13,6 +17,50 @@ const activeTask = {
   error: null,
   otpResolver: null,
 };
+
+let currentBrowserInstance = null;
+
+export function setActiveBrowserInstance(browser) {
+  currentBrowserInstance = browser;
+}
+
+export function getActiveBrowserInstance() {
+  return currentBrowserInstance;
+}
+
+export function setTaskStep(stepNumber) {
+  activeTask.step = stepNumber;
+  if (!activeTask.checkpointsCompleted.includes(stepNumber)) {
+    activeTask.checkpointsCompleted.push(stepNumber);
+  }
+}
+
+export function addCopiedString(str) {
+  if (!str || typeof str !== "string") return;
+  const cleaned = str.trim();
+  if (!cleaned) return;
+  if (!activeTask.copiedStrings.includes(cleaned)) {
+    activeTask.copiedStrings.push(cleaned);
+  }
+}
+
+export function addInterceptedUrl(entry) {
+  if (!entry) return;
+  const urlStr = typeof entry === "string" ? entry : entry.url;
+  if (!urlStr) return;
+
+  const exists = activeTask.interceptedUrls.some(u => (typeof u === "string" ? u : u.url) === urlStr);
+  if (!exists) {
+    if (activeTask.interceptedUrls.length >= 200) {
+      activeTask.interceptedUrls.shift();
+    }
+    activeTask.interceptedUrls.push(entry);
+  }
+}
+
+export function setReturnedData(data) {
+  activeTask.returnedData = data;
+}
 
 export function getActiveTaskState() {
   return { ...activeTask };
@@ -26,15 +74,27 @@ export function addLog(msg) {
 }
 
 export function resetActiveTask(email, dbName) {
+  if (currentBrowserInstance) {
+    try { currentBrowserInstance.close().catch(() => {}); } catch {}
+    currentBrowserInstance = null;
+  }
+  if (activeTask.otpResolver) {
+    try { activeTask.otpResolver(null); } catch {}
+    activeTask.otpResolver = null;
+  }
+
   activeTask.status = "RUNNING";
   activeTask.step = 1;
+  activeTask.checkpointsCompleted = [1];
   activeTask.logs = [];
+  activeTask.copiedStrings = [];
+  activeTask.interceptedUrls = [];
+  activeTask.returnedData = null;
   activeTask.redisUrl = null;
   activeTask.credentials = null;
   activeTask.otpError = null;
   activeTask.otpAttempt = 1;
   activeTask.error = null;
-  activeTask.otpResolver = null;
   addLog(`[START] Initializing provisioning process for email: ${email}, DB: ${dbName}...`);
 }
 
@@ -63,8 +123,12 @@ export function resolveOtp(otpCode) {
 export function stopActiveTask() {
   addLog("[STOPPED] Stop signal received. Halting automation engine...");
   if (activeTask.otpResolver) {
-    activeTask.otpResolver(null);
+    try { activeTask.otpResolver(null); } catch {}
     activeTask.otpResolver = null;
+  }
+  if (currentBrowserInstance) {
+    try { currentBrowserInstance.close().catch(() => {}); } catch {}
+    currentBrowserInstance = null;
   }
   activeTask.status = "STOPPED";
   activeTask.error = "Engine stopped by user.";
@@ -74,6 +138,10 @@ export function setTaskSuccess(result, cleanDbName) {
   if (activeTask.status === "STOPPED") return;
   activeTask.status = "SUCCESS";
   activeTask.step = 8;
+  if (!activeTask.checkpointsCompleted.includes(8)) {
+    activeTask.checkpointsCompleted.push(8);
+  }
+  activeTask.returnedData = result;
   if (typeof result === "string") {
     activeTask.redisUrl = result;
     activeTask.credentials = { redisUrl: result };
@@ -85,9 +153,11 @@ export function setTaskSuccess(result, cleanDbName) {
   const resToken = activeTask.credentials?.restToken || activeTask.credentials?.password || "";
   const isValid = activeTask.redisUrl &&
                   !activeTask.redisUrl.includes("default:@") &&
+                  !activeTask.redisUrl.includes("default:pending") &&
                   !activeTask.redisUrl.includes("default:required") &&
                   !activeTask.redisUrl.includes("****") &&
                   resToken &&
+                  resToken !== "pending" &&
                   resToken !== "required" &&
                   resToken.length > 15;
 
@@ -95,7 +165,7 @@ export function setTaskSuccess(result, cleanDbName) {
     try {
       const list = readApisEnvFile();
       const epMatch = activeTask.redisUrl.match(/@([^:\/]+)/);
-      const ep = epMatch ? epMatch[1] : "new-upstash-db.upstash.io";
+      const ep = epMatch ? epMatch[1] : activeTask.credentials?.endpoint || `${cleanDbName || "redis-db"}.upstash.io`;
       const savedDbName = cleanDbName || ep.replace(".upstash.io", "");
       const newItem = {
         name: savedDbName,
@@ -110,10 +180,12 @@ export function setTaskSuccess(result, cleanDbName) {
         list.push(newItem);
       }
       writeApisEnvFile(list);
-      addLog("[SUCCESS] Saved database credentials to local storage (apis.env)");
+      addLog(`[SUCCESS] Verified & saved active database "${savedDbName}" to apis.env`);
     } catch (e) {
-      console.error("Failed to auto-save credentials:", e.message);
+      console.error("Failed to save credentials to apis.env:", e.message);
     }
+  } else {
+    addLog(`[NOTICE] Credentials incomplete (password masked/pending). Skipping saving dummy entry to apis.env.`);
   }
 }
 

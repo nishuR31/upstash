@@ -419,6 +419,21 @@ export default function SettingsTab({
           </div>
         </div>
 
+        {/* Live Automation Selector & URL Tester */}
+        <div className="glass-card rounded-2xl p-6 space-y-4 border border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+              <Terminal className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-white">Live Automation Selector & URL Tester</h3>
+              <p className="text-xs text-slate-400">Test class names, CSS selectors, and DOM elements on target URLs in real-time.</p>
+            </div>
+          </div>
+
+          <SelectorTesterWidget showToast={showToast} />
+        </div>
+
         {/* OpenAPI Swagger UI link */}
         <div className="glass-card rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4 border border-white/10">
           <div className="flex items-center gap-3">
@@ -441,5 +456,93 @@ export default function SettingsTab({
         </div>
       </div>
     </section>
+  );
+}
+
+function SelectorTesterWidget({ showToast }: { showToast: (msg: string, type?: ToastType) => void }) {
+  const [testUrl, setTestUrl] = useState("https://console.upstash.com/auth/sign-up");
+  const [testSelector, setTestSelector] = useState("#email");
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<any>(null);
+
+  const handleRunSelectorTest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testUrl || !testSelector) {
+      showToast("Target URL and CSS selector are required.", "warn");
+      return;
+    }
+
+    setIsTesting(true);
+    setTestResult(null);
+
+    try {
+      const res = await fetch("/api/v1/automate/test-selector", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: testUrl, selector: testSelector }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setTestResult(data.data || data);
+        showToast("Selector test complete!", "success");
+      } else {
+        showToast(data.message || data.error || "Failed to test selector.", "error");
+      }
+    } catch (err: any) {
+      showToast(`Error running selector test: ${err.message}`, "error");
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 pt-2">
+      <form onSubmit={handleRunSelectorTest} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="space-y-1">
+          <label className="block text-xs font-bold text-slate-300">Target Web URL</label>
+          <input
+            type="url"
+            value={testUrl}
+            onChange={(e) => setTestUrl(e.target.value)}
+            className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono"
+            placeholder="https://example.com"
+            required
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="block text-xs font-bold text-slate-300">CSS Selector / Class / ID</label>
+          <input
+            type="text"
+            value={testSelector}
+            onChange={(e) => setTestSelector(e.target.value)}
+            className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono"
+            placeholder="#email or .btn-primary"
+            required
+          />
+        </div>
+        <div className="flex items-end">
+          <button
+            type="submit"
+            disabled={isTesting}
+            className="glow-btn-primary w-full py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+          >
+            {isTesting ? "Testing..." : "Test Selector on URL"}
+          </button>
+        </div>
+      </form>
+
+      {testResult && (
+        <div className="bg-slate-950/80 p-4 rounded-2xl border border-cyan-500/30 space-y-2 text-xs font-mono">
+          <div className="flex items-center justify-between border-b border-white/10 pb-2">
+            <span className="text-cyan-400 font-bold">Matches Found: {testResult.matchCount}</span>
+            <span className="text-slate-400">HTTP Status: {testResult.httpStatus}</span>
+          </div>
+          <pre className="text-slate-300 text-[11px] overflow-x-auto max-h-40 p-2 bg-slate-950 rounded-xl border border-white/5">
+            {JSON.stringify(testResult, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
   );
 }

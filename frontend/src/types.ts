@@ -24,6 +24,28 @@ export interface ToastItem {
 
 export type TaskStatus = "IDLE" | "RUNNING" | "WAITING_FOR_OTP" | "SUCCESS" | "FAILED" | "STOPPED";
 
+export interface InterceptedUrlItem {
+  url: string;
+  status?: number;
+  timestamp?: string;
+}
+
+export interface TaskState {
+  status: TaskStatus;
+  step: number;
+  checkpointsCompleted?: number[];
+  logs: string[];
+  copiedStrings?: string[];
+  interceptedUrls?: (string | InterceptedUrlItem)[];
+  returnedData?: any;
+  redisUrl?: string | null;
+  credentials?: any;
+  otpError?: string | null;
+  otpAttempt?: number;
+  maxOtpAttempts?: number;
+  error?: string | null;
+}
+
 export type ScrapableTargetType = "redis" | "kafka" | "qstash" | "vector" | "web_scraper";
 
 export interface ScrapableTargetConfig {
@@ -55,5 +77,14 @@ export interface CliCommandResult {
   status: "OK" | "ERR";
   output: string;
   latencyMs: number;
+}
+
+export interface SelectorTestResult {
+  targetUrl: string;
+  selector: string;
+  httpStatus: number;
+  htmlLengthBytes: number;
+  matchCount: number;
+  matches: { tag: string; text: string }[];
 }
 

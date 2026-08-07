@@ -143,8 +143,8 @@ vite.config.ts.timestamp-*
 .vite/
 
 # API Credentials & Environment Files
-apis.env
 *.env
+*.env.*
 
 # Local Chrome downloads
 chrome/

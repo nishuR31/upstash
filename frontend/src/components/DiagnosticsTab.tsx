@@ -232,14 +232,29 @@ export default function DiagnosticsTab({
               <label htmlFor="customUrlInput" className="block text-xs font-bold text-slate-300">
                 Or Custom Connection String (rediss://...)
               </label>
-              <input
-                type="text"
-                id="customUrlInput"
-                value={customUrl}
-                onChange={(e) => setCustomUrl(e.target.value)}
-                placeholder="rediss://default:token@cluster.upstash.io:6379"
-                className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white font-mono placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all"
-              />
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  id="customUrlInput"
+                  value={customUrl}
+                  onChange={(e) => setCustomUrl(e.target.value)}
+                  placeholder="rediss://default:token@cluster.upstash.io:6379"
+                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-white font-mono placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (customUrl) {
+                      navigator.clipboard.writeText(customUrl);
+                      showToast("Connection URL copied to clipboard!", "success");
+                    }
+                  }}
+                  className="absolute right-2 text-slate-400 hover:text-cyan-400 p-1.5 rounded-lg hover:bg-white/10 transition-all"
+                  title="Copy Connection URL"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
             {activeTab === "health" ? (
@@ -257,13 +272,28 @@ export default function DiagnosticsTab({
                 <form onSubmit={handleExecuteCliCommand} className="space-y-2">
                   <label className="block text-xs font-bold text-slate-300">Redis CLI Command Input</label>
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={cliInput}
-                      onChange={(e) => setCliInput(e.target.value)}
-                      placeholder="e.g. SET user:101 'Nishu'"
-                      className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
-                    />
+                    <div className="relative flex-1 flex items-center">
+                      <input
+                        type="text"
+                        value={cliInput}
+                        onChange={(e) => setCliInput(e.target.value)}
+                        placeholder="e.g. SET user:101 'Nishu'"
+                        className="w-full bg-slate-950 border border-white/10 rounded-xl pl-3.5 pr-9 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (cliInput) {
+                            navigator.clipboard.writeText(cliInput);
+                            showToast("CLI command copied to clipboard!", "success");
+                          }
+                        }}
+                        className="absolute right-2 text-slate-400 hover:text-purple-400 p-1 rounded-lg hover:bg-white/10 transition-all"
+                        title="Copy CLI Command"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                     <button
                       type="submit"
                       disabled={isRunning}

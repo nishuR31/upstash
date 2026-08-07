@@ -141,15 +141,25 @@ export default function OverviewTab({
                   </div>
 
                   <div className="bg-slate-950/60 rounded-xl p-3 border border-white/10 space-y-2 text-xs font-mono">
-                    <div className="flex justify-between items-center text-slate-400">
-                      <span>Endpoint:</span>
-                      <span className="text-slate-200 font-semibold truncate max-w-[180px]">
+                    <div className="flex justify-between items-center text-slate-400 gap-2">
+                      <span className="shrink-0">Endpoint:</span>
+                      <a
+                        href={`https://${db.endpoint || `${db.name}.upstash.io`}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-cyan-300 font-semibold truncate hover:underline"
+                        title={db.endpoint || `${db.name}.upstash.io`}
+                      >
                         {db.endpoint || `${db.name}.upstash.io`}
-                      </span>
+                      </a>
                     </div>
-                    <div className="flex justify-between items-center text-slate-400">
-                      <span>TCP Link:</span>
-                      <span className="text-cyan-400 font-semibold truncate max-w-[180px]">
+                    <div className="flex justify-between items-center text-slate-400 gap-2">
+                      <span className="shrink-0">TCP Link:</span>
+                      <span
+                        className="text-cyan-400 font-semibold truncate cursor-pointer hover:underline"
+                        onClick={() => copyToClipboard(db.redisUrl, "TCP Connection Link")}
+                        title={db.redisUrl || `rediss://default:...@${db.endpoint}:6379`}
+                      >
                         {db.redisUrl || `rediss://default:...@${db.endpoint}:6379`}
                       </span>
                     </div>

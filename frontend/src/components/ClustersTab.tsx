@@ -121,7 +121,23 @@ export default function ClustersTab({
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-slate-950/60 p-4 rounded-xl border border-white/10 font-mono text-xs">
                     <div className="space-y-1">
                       <span className="text-slate-400 text-[11px] font-sans block">Endpoint Hostname:</span>
-                      <span className="text-white font-semibold break-all">{db.endpoint || `${db.name}.upstash.io`}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <a
+                          href={`https://${db.endpoint || `${db.name}.upstash.io`}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-cyan-300 font-semibold break-all hover:underline"
+                        >
+                          {db.endpoint || `${db.name}.upstash.io`}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(db.endpoint || `${db.name}.upstash.io`, "Endpoint")}
+                          className="text-[10px] text-cyan-400 hover:text-white px-2 py-0.5 bg-cyan-500/10 rounded border border-cyan-500/20"
+                        >
+                          Copy
+                        </button>
+                      </div>
                     </div>
                     <div className="space-y-1">
                       <span className="text-slate-400 text-[11px] font-sans block">TCP Port:</span>
@@ -129,7 +145,23 @@ export default function ClustersTab({
                     </div>
                     <div className="space-y-1">
                       <span className="text-slate-400 text-[11px] font-sans block">REST Endpoint URL:</span>
-                      <span className="text-white font-semibold break-all">{db.restUrl || `https://${db.endpoint}`}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <a
+                          href={db.restUrl || `https://${db.endpoint}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-cyan-300 font-semibold break-all hover:underline"
+                        >
+                          {db.restUrl || `https://${db.endpoint}`}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(db.restUrl || `https://${db.endpoint}`, "REST URL")}
+                          className="text-[10px] text-cyan-400 hover:text-white px-2 py-0.5 bg-cyan-500/10 rounded border border-cyan-500/20"
+                        >
+                          Copy
+                        </button>
+                      </div>
                     </div>
                     <div className="md:col-span-2 lg:col-span-3 space-y-1">
                       <span className="text-slate-400 text-[11px] font-sans block">REST Authorization Token:</span>

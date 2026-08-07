@@ -4,8 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "bun --cwd backend server.js",
-    "dev:backend": "bun --cwd backend server.js",
+    "start": "bun --cwd backend src/index.js",
+    "dev:backend": "bun --cwd backend src/index.js",
     "dev:frontend": "bun --cwd frontend run dev",
     "build": "bun --cwd frontend run build"
   }

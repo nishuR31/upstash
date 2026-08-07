@@ -233,13 +233,27 @@ const Lightfall: React.FC<LightfallProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    const renderer = new Renderer({
-      dpr: dpr ?? (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1),
-      alpha: true,
-      antialias: true
-    });
+    let renderer: any = null;
+    let gl: any = null;
+
+    try {
+      renderer = new Renderer({
+        dpr: dpr ?? (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1),
+        alpha: true,
+        antialias: true
+      });
+      gl = renderer?.gl;
+    } catch (e) {
+      console.warn("WebGL is unavailable or context creation failed:", e);
+      return;
+    }
+
+    if (!gl || !gl.canvas) {
+      console.warn("WebGL context is null or unavailable.");
+      return;
+    }
+
     rendererRef.current = renderer;
-    const gl = renderer.gl;
     const canvas = gl.canvas;
 
     canvas.style.width = '100%';

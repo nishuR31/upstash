@@ -3,6 +3,7 @@ import {
   startAutomationHandler,
   submitOtpHandler,
   stopAutomationHandler,
+  testSelectorHandler,
 } from "../../controllers/automationController.js";
 import {
   getDatabasesHandler,
@@ -17,6 +18,7 @@ const v1Router = async (app) => {
   app.post("/automate/start", startAutomationHandler);
   app.post("/automate/otp", submitOtpHandler);
   app.post("/automate/stop", stopAutomationHandler);
+  app.post("/automate/test-selector", testSelectorHandler);
 
   // Database Hub Endpoints (/api/v1/databases, /api/v1/save-to-env, /api/v1/databases/delete)
   app.get("/databases", getDatabasesHandler);
